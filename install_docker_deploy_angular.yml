@@ -1,0 +1,63 @@
+---
+- name: Install Docker and Deploy Angular App
+  hosts: target_vm
+  become: yes
+  tasks:
+
+    # Step 1: Install Required Packages
+    - name: Install required system packages
+      apt:
+        name: ['apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common']
+        state: present
+        update_cache: yes
+
+    # Step 2: Add Docker’s Official GPG Key
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    # Step 3: Set Up Docker Repository
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    # Step 4: Install Docker
+    - name: Install Docker
+      apt:
+        name: docker-ce
+        state: latest
+        update_cache: yes
+
+    # Step 5: Start and Enable Docker Service
+    - name: Ensure Docker is running
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    # Step 6: Add the user to the Docker group
+    - name: Add Ubuntu user to Docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    # Step 7: Pull Angular Docker Image
+    - name: Pull Angular App Docker image
+      docker_image:
+        name: myrepo/angular-app:latest
+        source: pull
+
+    # Step 8: Run Angular Container
+    - name: Run Angular App container
+      docker_container:
+        name: angular_app
+        image: myrepo/angular-app:latest
+        state: started
+        restart_policy: always
+        ports:
+          - "80:80"  # Map container's port 80 to VM's port 80
+        env:
+          NODE_ENV: production
